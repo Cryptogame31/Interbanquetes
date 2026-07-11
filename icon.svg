@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f3e090" />
+      <stop offset="50%" stop-color="#d4af37" />
+      <stop offset="100%" stop-color="#aa7c11" />
+    </linearGradient>
+    <linearGradient id="darkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1f2833" />
+      <stop offset="100%" stop-color="#0b0c10" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="128" fill="url(#darkBg)" stroke="url(#gold)" stroke-width="12" />
+  
+  <!-- Crown/Shield Icon -->
+  <path d="M256 100 L370 150 L370 290 C370 380 256 430 256 430 C256 430 142 380 142 290 L142 150 Z" fill="none" stroke="url(#gold)" stroke-width="16" stroke-linejoin="round" />
+  
+  <!-- Inner Star / Graphic -->
+  <polygon points="256,190 274,235 322,235 282,264 298,310 256,281 214,310 230,264 190,235 238,235" fill="url(#gold)" />
+</svg>

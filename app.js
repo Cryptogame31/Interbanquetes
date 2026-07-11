@@ -1735,3 +1735,43 @@ window.addEventListener("DOMContentLoaded", () => {
         });
     });
 });
+
+// ==========================================
+// 11. PROGRESSIVE WEB APP (PWA) INSTALLATION
+// ==========================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => console.log('🚀 Service Worker registrado con éxito:', reg.scope))
+            .catch(err => console.error('❌ Error al registrar el Service Worker:', err));
+    });
+}
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    // Show PWA install buttons on the page
+    const installBtns = document.querySelectorAll('.btn-install-pwa');
+    installBtns.forEach(btn => {
+        btn.style.display = 'inline-flex';
+    });
+});
+
+document.addEventListener('click', (e) => {
+    const installBtn = e.target.closest('.btn-install-pwa');
+    if (installBtn && deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('El usuario aceptó la instalación de la PWA');
+            }
+            deferredPrompt = null;
+            const installBtns = document.querySelectorAll('.btn-install-pwa');
+            installBtns.forEach(btn => {
+                btn.style.display = 'none';
+            });
+        });
+    }
+});

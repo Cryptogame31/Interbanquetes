@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interbanquetes - Red de Trabajo y Calendario del Gremio</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
     <!-- Google Fonts: Outfit & Inter for premium typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,6 +52,11 @@
                 <button class="nav-item" data-tab="packages">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                     <span>Paquetes Gremio <span class="badge">Pronto</span></span>
+                </button>
+                <!-- Botón Instalar App (PWA) -->
+                <button class="nav-item btn-install-pwa" style="display: none; color: var(--color-primary); background: rgba(212, 175, 55, 0.05); border: 1px dashed rgba(212, 175, 55, 0.2); margin-top: 1rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Descargar App 📱</span>
                 </button>
                 <!-- Botón de Cerrar Sesión -->
                 <button class="nav-item" id="btn-logout" style="margin-top: auto; color: var(--color-danger); border: 1px solid rgba(244, 63, 94, 0.15); background: rgba(244, 63, 94, 0.02);">
@@ -497,6 +503,12 @@
                 <button type="submit" class="btn btn-primary btn-auth" id="btn-login-submit">Ingresar</button>
                 <div class="auth-error-msg" id="login-error-msg"></div>
             </form>
+            <div class="pwa-install-wrapper" style="text-align: center; margin: 0.5rem 1.75rem 1.25rem 1.75rem;">
+                <button type="button" class="btn btn-secondary btn-install-pwa" style="display: none; width: 100%; background: rgba(212, 175, 55, 0.08); color: var(--color-primary); border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 10px; padding: 0.65rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Descargar App Gremial 📱
+                </button>
+            </div>
             <div class="auth-footer" style="display: none;">
                 <span>¿Tu salón no está en la red? </span><a href="#" class="auth-link-highlight" id="link-show-register">Regístrate aquí</a>
             </div>
