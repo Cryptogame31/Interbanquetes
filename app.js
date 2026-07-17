@@ -1252,8 +1252,12 @@ function renderAdminPanel() {
             });
             item.querySelector(".btn-reject-salon-action").addEventListener("click", async () => {
                 const targetName = isSeller ? salon.owner : salon.name;
-                if (confirm(`¿Rechazar y eliminar la solicitud de "${targetName}"?`)) {
-                    await appDb.deleteSalon(salon.id, salon.username);
+                const c1 = confirm(`¿Rechazar y eliminar la solicitud de "${targetName}"?`);
+                if (c1) {
+                    const c2 = confirm(`🚨 ¿Confirmas por segunda vez rechazar y eliminar permanentemente la solicitud de "${targetName}"?`);
+                    if (c2) {
+                        await appDb.deleteSalon(salon.id, salon.username);
+                    }
                 }
             });
         } else {
@@ -1265,8 +1269,12 @@ function renderAdminPanel() {
             }
             item.querySelector(".btn-icon-action.delete").addEventListener("click", async () => {
                 const targetName = isSeller ? salon.owner : salon.name;
-                if (confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${targetName}" del gremio?`)) {
-                    await appDb.deleteSalon(salon.id, salon.username);
+                const c1 = confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${targetName}" del gremio?`);
+                if (c1) {
+                    const c2 = confirm(`🚨 ¡Acción Irreversible! Confirma por segunda vez la eliminación de "${targetName}". Se borrarán todos sus datos y reservas.`);
+                    if (c2) {
+                        await appDb.deleteSalon(salon.id, salon.username);
+                    }
                 }
             });
         }
@@ -1468,6 +1476,17 @@ function registerEventListeners() {
     
     document.getElementById("btn-save-booking").addEventListener("click", async () => {
         if (currentUser && currentUser.role === "owner" && currentUser.salonId) {
+            const mySalon = salons.find(s => s.id === currentUser.salonId);
+            const booking = mySalon && mySalon.bookings ? mySalon.bookings.find(b => b.date === selectedDateStr) : null;
+            const isEditing = !!booking;
+            
+            if (isEditing) {
+                const c1 = confirm("⚠️ ¿Confirmas que deseas modificar los datos de esta reserva existente?");
+                if (!c1) return;
+                const c2 = confirm("🚨 ¿Confirmas por segunda vez aplicar las modificaciones a la reserva?");
+                if (!c2) return;
+            }
+            
             const eventVal = document.getElementById("my-booking-event").value.trim();
             const guestsVal = document.getElementById("my-booking-guests").value;
             const clientVal = document.getElementById("my-booking-client").value.trim();
@@ -1484,8 +1503,12 @@ function registerEventListeners() {
     
     document.getElementById("btn-delete-booking").addEventListener("click", async () => {
         if (currentUser && currentUser.role === "owner" && currentUser.salonId) {
-            if (confirm("¿Estás seguro de que deseas liberar esta fecha y borrar la reserva?")) {
-                await appDb.deleteBooking(currentUser.salonId, selectedDateStr);
+            const c1 = confirm("⚠️ ¿Estás seguro de que deseas liberar esta fecha y borrar la reserva?");
+            if (c1) {
+                const c2 = confirm("🚨 ¡Acción Irreversible! Confirma por segunda vez liberar la fecha y borrar permanentemente los datos del cliente.");
+                if (c2) {
+                    await appDb.deleteBooking(currentUser.salonId, selectedDateStr);
+                }
             }
         }
     });
@@ -1625,19 +1648,22 @@ function setupAuthListeners() {
     if (accountTypeSelect && salonSpecificFields) {
         accountTypeSelect.addEventListener("change", (e) => {
             const role = e.target.value;
-            const requiredFields = salonSpecificFields.querySelectorAll("[required]");
+            const fieldsToToggle = salonSpecificFields.querySelectorAll("input, select, textarea");
             
             if (role === "seller") {
                 salonSpecificFields.style.display = "none";
-                requiredFields.forEach(field => {
-                    field.setAttribute("data-was-required", "true");
-                    field.removeAttribute("required");
+                fieldsToToggle.forEach(field => {
+                    if (field.hasAttribute("required")) {
+                        field.setAttribute("data-was-required", "true");
+                        field.removeAttribute("required");
+                    }
                 });
             } else {
                 salonSpecificFields.style.display = "block";
-                requiredFields.forEach(field => {
+                fieldsToToggle.forEach(field => {
                     if (field.getAttribute("data-was-required") === "true") {
                         field.setAttribute("required", "");
+                        field.removeAttribute("data-was-required");
                     }
                 });
             }
