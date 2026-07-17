@@ -1158,9 +1158,6 @@ function renderAdminPanel() {
         const displayName = isSeller ? `👤 ${salon.owner} (Vendedor)` : salon.name;
         const locationHTML = isSeller ? `<span style="font-size: 0.8rem; color: var(--color-primary);">Acceso de Vendedor Gremial</span>` : `📍 ${salon.address}`;
         
-        let statusBadgeHTML = "";
-        let actionsHTML = "";
-        
         if (!salon.authorized) {
             statusBadgeHTML = `<span class="admin-status-tag pending">Pendiente</span>`;
             actionsHTML = `
