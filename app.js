@@ -1317,7 +1317,7 @@ function openSearchDateModal(dateStr) {
     dayTypeLabelEl.textContent = dayInfo.name;
     
     resultsContainer.innerHTML = "";
-    const activeSalons = salons.filter(s => s.authorized === true);
+    const activeSalons = salons.filter(s => s.authorized === true && s.role === "owner");
     
     activeSalons.forEach(salon => {
         const booking = salon.bookings ? salon.bookings.find(b => b.date === dateStr) : null;
@@ -1336,6 +1336,16 @@ function openSearchDateModal(dateStr) {
             `;
         }
         
+        let contactHTML = "";
+        if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+            contactHTML = `
+                <div class="salon-contact-links" style="font-size: 0.72rem; margin-top: 2px;">
+                    <a href="tel:${salon.phone}" style="color: var(--color-primary); text-decoration: none; margin-right: 8px;">📞 ${salon.phone || 'N/A'}</a>
+                    <a href="mailto:${salon.username}" style="color: var(--text-muted); text-decoration: none;">✉️ ${salon.username}</a>
+                </div>
+            `;
+        }
+        
         item.innerHTML = `
             <div class="modal-salon-details" style="flex-grow: 1;">
                 <span class="modal-salon-status-badge ${isBooked ? 'busy' : 'available'}" style="flex-shrink: 0;">
@@ -1343,7 +1353,8 @@ function openSearchDateModal(dateStr) {
                 </span>
                 <div class="modal-salon-meta" style="flex-grow: 1;">
                     <h4>${salon.name}</h4>
-                    <p style="font-size: 0.75rem; color: var(--text-muted);">Contacto: ${salon.owner}</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">Contacto: ${salon.owner}</p>
+                    ${contactHTML}
                     ${internalInfoHTML}
                 </div>
             </div>
