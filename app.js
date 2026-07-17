@@ -110,6 +110,8 @@ let currentMonthDate = new Date(2026, 10, 1); // Defaults to November 2026
 let selectedDateStr = "2026-11-29";
 let activeTab = "calendar";
 let unsubscribeSalons = null;
+let unsubscribeBackups = null;
+let backups = [];
 
 // ==========================================
 // 4. AUTHENTICATION SERVICE WRAPPER
@@ -611,6 +613,123 @@ const appDb = {
         } else {
             localStorage.setItem("interbanquetes_salons", JSON.stringify(demoSalons));
             window.dispatchEvent(new Event("interbanquetes_db_change"));
+        }
+    },
+
+    syncBackups: (callback) => {
+        if (useRealFirebase) {
+            unsubscribeBackups = firestoreDb.collection("backups").orderBy("createdAt", "desc").onSnapshot((snapshot) => {
+                const backupsList = [];
+                snapshot.forEach(docSnap => {
+                    backupsList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                callback(backupsList);
+            }, (error) => {
+                console.error("Error en base de datos backups:", error);
+            });
+        } else {
+            const loadLocalBackups = () => {
+                let localBackups = localStorage.getItem("interbanquetes_backups");
+                if (!localBackups) {
+                    localStorage.setItem("interbanquetes_backups", JSON.stringify([]));
+                    localBackups = "[]";
+                }
+                callback(JSON.parse(localBackups));
+            };
+            loadLocalBackups();
+            window.addEventListener("storage", (e) => {
+                if (e.key === "interbanquetes_backups") loadLocalBackups();
+            });
+            window.addEventListener("interbanquetes_backups_change", loadLocalBackups);
+            
+            unsubscribeBackups = () => {
+                window.removeEventListener("storage", loadLocalBackups);
+                window.removeEventListener("interbanquetes_backups_change", loadLocalBackups);
+            };
+        }
+    },
+
+    createBackup: async (label) => {
+        const timestamp = new Date().toISOString();
+        const type = label.startsWith("Auto") ? "automatic" : "manual";
+        const currentSalons = [...salons];
+        const newBackup = {
+            createdAt: timestamp,
+            label: label,
+            data: JSON.stringify(currentSalons),
+            type: type
+        };
+
+        if (useRealFirebase) {
+            const snaps = await firestoreDb.collection("backups").orderBy("createdAt", "asc").get();
+            const existingBackups = [];
+            snaps.forEach(docSnap => {
+                existingBackups.push({ docId: docSnap.id, ...docSnap.data() });
+            });
+
+            if (existingBackups.length >= 15) {
+                const toDeleteCount = existingBackups.length - 14;
+                for (let i = 0; i < toDeleteCount; i++) {
+                    await firestoreDb.collection("backups").doc(existingBackups[i].docId).delete();
+                }
+            }
+
+            const docRef = firestoreDb.collection("backups").doc();
+            await docRef.set(newBackup);
+        } else {
+            let localBackups = JSON.parse(localStorage.getItem("interbanquetes_backups")) || [];
+            localBackups.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            if (localBackups.length >= 15) {
+                const toDeleteCount = localBackups.length - 14;
+                localBackups.splice(0, toDeleteCount);
+            }
+
+            newBackup.id = "backup_" + Date.now();
+            localBackups.push(newBackup);
+            localBackups.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            localStorage.setItem("interbanquetes_backups", JSON.stringify(localBackups));
+            window.dispatchEvent(new Event("interbanquetes_backups_change"));
+        }
+    },
+
+    restoreBackup: async (backupId) => {
+        if (useRealFirebase) {
+            const docSnap = await firestoreDb.collection("backups").doc(backupId).get();
+            if (!docSnap.exists) {
+                throw new Error("Backup no encontrado");
+            }
+            const backup = docSnap.data();
+            const restoredSalons = JSON.parse(backup.data);
+
+            const snaps = await firestoreDb.collection("salons").get();
+            for (const docSnap of snaps.docs) {
+                await docSnap.ref.delete();
+            }
+
+            for (const salon of restoredSalons) {
+                await firestoreDb.collection("salons").doc(salon.id).set(salon);
+            }
+        } else {
+            const localBackups = JSON.parse(localStorage.getItem("interbanquetes_backups")) || [];
+            const backup = localBackups.find(b => b.id === backupId);
+            if (!backup) {
+                throw new Error("Backup no encontrado en local");
+            }
+            const restoredSalons = JSON.parse(backup.data);
+            localStorage.setItem("interbanquetes_salons", JSON.stringify(restoredSalons));
+            window.dispatchEvent(new Event("interbanquetes_db_change"));
+        }
+    },
+
+    deleteBackupDirectly: async (backupId) => {
+        if (useRealFirebase) {
+            await firestoreDb.collection("backups").doc(backupId).delete();
+        } else {
+            let localBackups = JSON.parse(localStorage.getItem("interbanquetes_backups")) || [];
+            localBackups = localBackups.filter(b => b.id !== backupId);
+            localStorage.setItem("interbanquetes_backups", JSON.stringify(localBackups));
+            window.dispatchEvent(new Event("interbanquetes_backups_change"));
         }
     }
 };
@@ -1445,6 +1564,31 @@ function registerEventListeners() {
         });
     }
     
+    const btnCreateBackup = document.getElementById("btn-create-backup");
+    if (btnCreateBackup) {
+        btnCreateBackup.addEventListener("click", async () => {
+            const defaultLabel = `Manual: ${new Date().toISOString().split('T')[0]}`;
+            const label = prompt("Ingresa un nombre descriptivo para esta copia de seguridad:", defaultLabel);
+            if (label !== null) {
+                const cleanLabel = label.trim() || defaultLabel;
+                try {
+                    btnCreateBackup.disabled = true;
+                    btnCreateBackup.textContent = "Respaldando...";
+                    await appDb.createBackup(cleanLabel);
+                    alert("¡Copia de seguridad creada con éxito!");
+                } catch (err) {
+                    alert("Error al crear copia de seguridad: " + err.message);
+                } finally {
+                    btnCreateBackup.disabled = false;
+                    btnCreateBackup.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Respaldar Ahora
+                    `;
+                }
+            }
+        });
+    }
+    
     document.getElementById("btn-logout").addEventListener("click", async () => {
         if (confirm("¿Cerrar sesión de la red de Interbanquetes?")) {
             await appAuth.logout();
@@ -1805,8 +1949,26 @@ function handleSessionStateChange(user, statusObj = null) {
         pendingWrapper.classList.add("hidden");
         appWrapper.style.display = "grid";
         renderAllViews();
+        
+        if (user.role === "admin") {
+            appDb.syncBackups((data) => {
+                backups = data;
+                renderBackupsList();
+                checkWeeklyBackup();
+            });
+        } else {
+            if (unsubscribeBackups) {
+                unsubscribeBackups();
+                unsubscribeBackups = null;
+            }
+        }
     } else {
         appWrapper.style.display = "none";
+        
+        if (unsubscribeBackups) {
+            unsubscribeBackups();
+            unsubscribeBackups = null;
+        }
         
         if (statusObj && statusObj.status === "pending") {
             authWrapper.classList.add("hidden");
@@ -1940,3 +2102,105 @@ document.addEventListener('click', (e) => {
         });
     }
 });
+
+function renderBackupsList() {
+    const listContainer = document.getElementById("admin-backups-list-container");
+    if (!listContainer) return;
+    listContainer.innerHTML = "";
+    
+    if (backups.length === 0) {
+        listContainer.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 0.5rem; opacity: 0.5;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <p>No hay copias de seguridad registradas.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    backups.forEach(backup => {
+        const item = document.createElement("div");
+        item.className = "backup-item";
+        
+        const dateFormatted = formatLongDate(backup.createdAt.split('T')[0]) + " " + backup.createdAt.split('T')[1].substring(0, 5);
+        const sizeInfo = backup.data ? (new Blob([backup.data]).size / 1024).toFixed(1) + " KB" : "? KB";
+        
+        const isAuto = backup.type === "automatic";
+        const labelTag = isAuto ? `<span class="admin-status-tag pending" style="background: rgba(212, 175, 55, 0.1); color: var(--color-primary); margin-left: 5px; font-size: 0.65rem; padding: 2px 6px;">AUTO</span>` : "";
+        
+        item.innerHTML = `
+            <div class="backup-info">
+                <div class="backup-name" style="display: flex; align-items: center; gap: 4px;">
+                    <strong>${backup.label}</strong>
+                    ${labelTag}
+                </div>
+                <div class="backup-date">📅 ${dateFormatted} | 💾 ${sizeInfo}</div>
+            </div>
+            <div class="backup-actions">
+                <button class="btn btn-backup-restore btn-sm" data-backup-id="${backup.id || backup.createdAt}" title="Restaurar Base de Datos" style="padding: 0.4rem 0.75rem; font-size: 0.72rem; display: flex; align-items: center; gap: 4px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Restaurar
+                </button>
+                <button class="btn btn-icon-action delete btn-sm btn-delete-backup" data-backup-id="${backup.id || backup.createdAt}" title="Eliminar Copia" style="padding: 0.4rem; min-width: auto; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--color-danger);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-4"/></svg>
+                </button>
+            </div>
+        `;
+        
+        item.querySelector(".btn-backup-restore").addEventListener("click", async () => {
+            const backupId = backup.id || backup.createdAt;
+            const c1 = confirm(`⚠️ ¿Confirmas que deseas restaurar la base de datos completa a este punto de restauración del ${dateFormatted}? Se perderán todas las reservas y registros posteriores.`);
+            if (c1) {
+                const c2 = confirm(`🚨 ¡ACCION CRÍTICA! Confirma por segunda vez la restauración completa. Toda la información actual será reemplazada.`);
+                if (c2) {
+                    try {
+                        await appDb.restoreBackup(backupId);
+                        alert("¡Base de datos restaurada con éxito!");
+                    } catch (err) {
+                        alert("Error al restaurar: " + err.message);
+                    }
+                }
+            }
+        });
+        
+        item.querySelector(".btn-delete-backup").addEventListener("click", async () => {
+            const backupId = backup.id || backup.createdAt;
+            const c1 = confirm(`¿Estás seguro de que deseas eliminar permanentemente esta copia de seguridad?`);
+            if (c1) {
+                const c2 = confirm(`🚨 ¿Confirmas por segunda vez la eliminación de esta copia? Esta acción no se puede deshacer.`);
+                if (c2) {
+                    await appDb.deleteBackupDirectly(backupId);
+                }
+            }
+        });
+        
+        listContainer.appendChild(item);
+    });
+}
+
+function checkWeeklyBackup() {
+    if (!currentUser || currentUser.role !== "admin") return;
+    
+    const autoBackups = backups.filter(b => b.type === "automatic");
+    let needsBackup = false;
+    
+    if (autoBackups.length === 0) {
+        needsBackup = true;
+    } else {
+        const latestAuto = autoBackups[0];
+        const lastDate = new Date(latestAuto.createdAt);
+        const diffDays = (Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays >= 7) {
+            needsBackup = true;
+        }
+    }
+    
+    if (needsBackup) {
+        const dateStr = new Date().toISOString().split('T')[0];
+        appDb.createBackup(`Auto: Semanal - ${dateStr}`).then(() => {
+            console.log("Copia de seguridad automática (semanal) creada con éxito.");
+        }).catch(err => {
+            console.error("Error al crear copia de seguridad automática:", err);
+        });
+    }
+}

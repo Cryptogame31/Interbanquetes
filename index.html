@@ -327,6 +327,25 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Right: Database Backups Panel -->
+                    <div class="card admin-backups-card">
+                        <div class="card-header-styled flex-between" style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem; margin-bottom: 1.5rem;">
+                            <div>
+                                <h3>Copias de Seguridad</h3>
+                                <p class="subtitle">Historial de respaldos de base de datos (Máx. 15 copias).</p>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-create-backup" style="padding: 0.5rem 0.85rem; font-size: 0.78rem;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Respaldar Ahora
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="backups-list" id="admin-backups-list-container">
+                                <!-- Dinámico -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

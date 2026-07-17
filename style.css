@@ -2310,3 +2310,76 @@ body {
     width: 18px;
     height: 18px;
 }
+
+/* Admin Backups Layout & Styling */
+.admin-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.backups-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.backup-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    transition: var(--transition-smooth);
+}
+
+.backup-item:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+}
+
+.backup-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.backup-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.backup-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.backup-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-backup-restore {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.btn-backup-restore:hover {
+    background: var(--color-success) !important;
+    color: var(--text-dark) !important;
+}
+
+@media (max-width: 1250px) {
+    .admin-layout {
+        grid-template-columns: 1fr;
+    }
+}
