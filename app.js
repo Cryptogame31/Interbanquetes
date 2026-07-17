@@ -259,7 +259,7 @@ const appAuth = {
                     products: [],
                     bookings: [],
                     authorized: false,
-                    role: "owner"
+                    role: salonData.role || "owner"
                 };
                 
                 await firestoreDb.collection("salons").doc(uid).set(newSalon);
