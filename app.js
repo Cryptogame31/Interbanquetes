@@ -97,6 +97,7 @@ const MOCK_INITIAL_USERS = {
     "yo@interbanquetes.com": { email: "yo@interbanquetes.com", password: "user123", salonId: "yo", role: "owner", authorized: true },
     "toni@interbanquetes.com": { email: "toni@interbanquetes.com", password: "toni123", salonId: "toni", role: "owner", authorized: true },
     "lina@interbanquetes.com": { email: "lina@interbanquetes.com", password: "lina123", salonId: "lina", role: "owner", authorized: true },
+    "vendedor@demo.com": { email: "vendedor@demo.com", password: "vendedor123", salonId: "vendedor_demo", role: "seller", name: "Vendedor Gremial", authorized: true },
     "admin@interbanquetes.com": { email: "admin@interbanquetes.com", password: "admin123", salonId: null, role: "admin", authorized: true }
 };
 
@@ -176,6 +177,8 @@ const appAuth = {
                 let ownerName = "Miembro Gremial";
                 if (user.role === "admin") {
                     ownerName = "Super Administrador";
+                } else if (user.role === "seller") {
+                    ownerName = user.name || "Vendedor Gremial";
                 } else {
                     const localSalons = JSON.parse(localStorage.getItem("interbanquetes_salons")) || MOCK_INITIAL_SALONS;
                     const salon = localSalons.find(s => s.id === user.salonId);
@@ -284,7 +287,8 @@ const appAuth = {
                 email: emailKey,
                 password: password,
                 salonId: salonId,
-                role: "owner",
+                role: salonData.role || "owner",
+                name: salonData.owner,
                 authorized: false
             };
             localStorage.setItem("interbanquetes_mock_users", JSON.stringify(mockUsers));
@@ -308,7 +312,7 @@ const appAuth = {
                 products: [],
                 bookings: [],
                 authorized: false,
-                role: "owner"
+                role: salonData.role || "owner"
             };
             
             localSalons.push(newSalon);
@@ -702,6 +706,14 @@ function renderUserBadge() {
         
         document.getElementById("nav-admin").classList.remove("hidden");
         document.getElementById("nav-my-salon").classList.add("hidden");
+    } else if (currentUser.role === "seller") {
+        avatarEl.textContent = currentUser.name.charAt(0).toUpperCase();
+        avatarEl.className = "avatar user-bg-yo";
+        nameEl.textContent = currentUser.name;
+        roleEl.textContent = "Vendedor Gremial";
+        
+        document.getElementById("nav-admin").classList.add("hidden");
+        document.getElementById("nav-my-salon").classList.add("hidden");
     } else {
         const salon = salons.find(s => s.id === currentUser.salonId);
         const initial = currentUser.name.charAt(0);
@@ -738,15 +750,14 @@ function renderCalendar() {
     
     const firstDay = new Date(year, month, 1);
     let startDayOfWeek = firstDay.getDay(); 
+    if (startDayOfWeek === 0) startDayOfWeek = 7; 
     
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysInPrevMonth = new Date(year, month, 0).getDate();
     
-    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-        const prevDayCell = document.createElement("div");
-        prevDayCell.className = "cal-day-cell other-month";
-        prevDayCell.innerHTML = `<span class="cal-day-number">${daysInPrevMonth - i}</span>`;
-        container.appendChild(prevDayCell);
+    for (let i = 1; i < startDayOfWeek; i++) {
+        const emptyCell = document.createElement("div");
+        emptyCell.className = "cal-day-cell empty";
+        container.appendChild(emptyCell);
     }
     
     for (let day = 1; day <= daysInMonth; day++) {
@@ -772,10 +783,10 @@ function renderCalendar() {
         
         dayCell.innerHTML = `<span class="cal-day-number">${day}</span>`;
         
-        const totalSalons = salons.filter(s => s.authorized === true).length;
+        const totalSalons = salons.filter(s => s.authorized === true && s.role === "owner").length;
         let bookedCount = 0;
         
-        salons.filter(s => s.authorized === true).forEach(salon => {
+        salons.filter(s => s.authorized === true && s.role === "owner").forEach(salon => {
             if (salon.bookings && salon.bookings.some(b => b.date === dateStr)) {
                 bookedCount++;
             }
@@ -794,7 +805,7 @@ function renderCalendar() {
         const indicatorsWrapper = document.createElement("div");
         indicatorsWrapper.className = "cal-status-indicators";
         
-        salons.filter(s => s.authorized === true).forEach(salon => {
+        salons.filter(s => s.authorized === true && s.role === "owner").forEach(salon => {
             const dot = document.createElement("span");
             dot.className = "indicator-dot";
             const isBooked = salon.bookings && salon.bookings.some(b => b.date === dateStr);
@@ -847,7 +858,7 @@ function renderSelectedDateDetails() {
     
     listEl.innerHTML = "";
     
-    const activeSalons = salons.filter(s => s.authorized === true);
+    const activeSalons = salons.filter(s => s.authorized === true && s.role === "owner");
     
     activeSalons.forEach(salon => {
         const booking = salon.bookings ? salon.bookings.find(b => b.date === selectedDateStr) : null;
@@ -866,6 +877,16 @@ function renderSelectedDateDetails() {
             `;
         }
         
+        let contactHTML = "";
+        if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+            contactHTML = `
+                <div class="salon-contact-links" style="font-size: 0.72rem; margin-top: 2px;">
+                    <a href="tel:${salon.phone}" style="color: var(--color-primary); text-decoration: none; margin-right: 8px;">📞 ${salon.phone || 'N/A'}</a>
+                    <a href="mailto:${salon.username}" style="color: var(--text-muted); text-decoration: none;">✉️ ${salon.username}</a>
+                </div>
+            `;
+        }
+        
         item.innerHTML = `
             <div class="salon-status-left" style="flex-grow: 1;">
                 <span class="status-indicator-icon ${isBooked ? 'busy' : 'available'}" style="flex-shrink: 0;">
@@ -878,6 +899,7 @@ function renderSelectedDateDetails() {
                     <div>
                         <span class="salon-name" style="font-weight: 600;">${salon.name}</span>
                         <span class="salon-owner" style="font-size: 0.75rem; color: var(--text-muted);"> - Propietario: ${salon.owner}</span>
+                        ${contactHTML}
                     </div>
                     ${internalInfoHTML}
                 </div>
@@ -944,7 +966,7 @@ function renderDirectory() {
     if (!container) return;
     container.innerHTML = "";
     
-    const activeSalons = salons.filter(s => s.authorized === true);
+    const activeSalons = salons.filter(s => s.authorized === true && s.role === "owner");
     
     if (activeSalons.length === 0) {
         container.innerHTML = `<div class="card" style="grid-column: 1/-1; text-align: center;"><p>No hay salones habilitados en el gremio todavía.</p></div>`;
@@ -989,12 +1011,23 @@ function renderDirectory() {
             `;
         }
         
+        let contactHTML = "";
+        if (currentUser && (currentUser.role === 'owner' || currentUser.role === 'admin')) {
+            contactHTML = `
+                <div class="salon-card-contact-info" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;">
+                    <span>📞 <a href="tel:${salon.phone}" style="color: var(--color-primary); text-decoration: none; font-weight: 500;">${salon.phone || 'Sin teléfono'}</a></span>
+                    <span>✉️ <a href="mailto:${salon.username}" style="color: var(--text-muted); text-decoration: none;">${salon.username}</a></span>
+                </div>
+            `;
+        }
+        
         card.innerHTML = `
             <div>
                 <div class="salon-card-header flex-between">
                     <div>
                         <h3>${salon.name}</h3>
                         <span class="owner-label">Contacto: ${salon.owner} ${isMine ? '(Tú)' : ''}</span>
+                        ${contactHTML}
                     </div>
                 </div>
                 
@@ -1121,6 +1154,13 @@ function renderAdminPanel() {
         let statusBadgeHTML = "";
         let actionsHTML = "";
         
+        const isSeller = salon.role === "seller";
+        const displayName = isSeller ? `👤 ${salon.owner} (Vendedor)` : salon.name;
+        const locationHTML = isSeller ? `<span style="font-size: 0.8rem; color: var(--color-primary);">Acceso de Vendedor Gremial</span>` : `📍 ${salon.address}`;
+        
+        let statusBadgeHTML = "";
+        let actionsHTML = "";
+        
         if (!salon.authorized) {
             statusBadgeHTML = `<span class="admin-status-tag pending">Pendiente</span>`;
             actionsHTML = `
@@ -1139,11 +1179,13 @@ function renderAdminPanel() {
             statusBadgeHTML = `<span class="admin-status-tag active">Activo</span>`;
             actionsHTML = `
                 <div class="admin-action-buttons">
+                    ${isSeller ? '' : `
                     <button class="btn btn-icon-action edit" data-salon-id="${salon.id}" title="Editar Salón">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                         Editar
                     </button>
-                    <button class="btn btn-icon-action delete" data-salon-id="${salon.id}" data-email="${salon.username}" title="Eliminar Salón">
+                    `}
+                    <button class="btn btn-icon-action delete" data-salon-id="${salon.id}" data-email="${salon.username}" title="Eliminar Miembro">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                         Eliminar
                     </button>
@@ -1151,38 +1193,52 @@ function renderAdminPanel() {
             `;
         }
         
-        const initial = salon.name.charAt(0).toUpperCase();
-        let colorClass = "yo";
-        if (salon.username.includes("toni")) colorClass = "toni";
-        else if (salon.username.includes("lina")) colorClass = "lina";
-        
-        item.innerHTML = `
-            <div class="admin-salon-header-section">
-                <div class="avatar-admin user-bg-${colorClass}">${initial}</div>
-                <div class="admin-salon-title-info">
-                    <div class="flex-align-center" style="gap: 0.5rem; flex-wrap: wrap;">
-                        <h4>${salon.name}</h4>
-                        ${statusBadgeHTML}
-                    </div>
-                    <span class="admin-salon-address-lbl">📍 ${salon.address}</span>
+        let pricesSectionHTML = "";
+        if (isSeller) {
+            pricesSectionHTML = `
+                <div class="admin-prices-grid" style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <span class="admin-status-tag" style="background: rgba(212, 175, 55, 0.1); color: var(--color-primary); border: 1px solid rgba(212, 175, 55, 0.2); font-weight: 600; padding: 0.5rem 0.75rem;">SOLO LECTURA DE CALENDARIO</span>
                 </div>
-            </div>
-            
-            <div class="admin-salon-contact-section">
-                <span class="contact-lbl">Propietario / Contacto</span>
-                <strong>${salon.owner}</strong>
-                <a href="mailto:${salon.username}" class="contact-email">${salon.username}</a>
-                <a href="tel:${salon.phone}" class="contact-phone">📞 ${salon.phone || 'Sin Teléfono'}</a>
-            </div>
-            
-            <div class="admin-salon-prices-section">
-                <span class="pricing-lbl">Tarifas del Gremio</span>
+            `;
+        } else {
+            pricesSectionHTML = `
                 <div class="admin-prices-grid">
                     <div class="admin-price-badge"><span>Sáb:</span><strong>${formatCurrency(salon.prices.saturday)}</strong></div>
                     <div class="admin-price-badge"><span>Vie:</span><strong>${formatCurrency(salon.prices.friday)}</strong></div>
                     <div class="admin-price-badge"><span>Dom:</span><strong>${formatCurrency(salon.prices.sunday)}</strong></div>
                     <div class="admin-price-badge"><span>Sem:</span><strong>${formatCurrency(salon.prices.weekday)}</strong></div>
                 </div>
+            `;
+        }
+        
+        const initial = (salon.owner || salon.name || "M").charAt(0).toUpperCase();
+        let colorClass = "yo";
+        if (salon.username.includes("toni")) colorClass = "toni";
+        else if (salon.username.includes("lina")) colorClass = "lina";
+        else if (isSeller) colorClass = "yo";
+        
+        item.innerHTML = `
+            <div class="admin-salon-header-section">
+                <div class="avatar-admin user-bg-${colorClass}">${initial}</div>
+                <div class="admin-salon-title-info">
+                    <div class="flex-align-center" style="gap: 0.5rem; flex-wrap: wrap;">
+                        <h4>${displayName}</h4>
+                        ${statusBadgeHTML}
+                    </div>
+                    <span class="admin-salon-address-lbl">${locationHTML}</span>
+                </div>
+            </div>
+            
+            <div class="admin-salon-contact-section">
+                <span class="contact-lbl">${isSeller ? 'Nombre de Vendedor' : 'Propietario / Contacto'}</span>
+                <strong>${salon.owner}</strong>
+                <a href="mailto:${salon.username}" class="contact-email">${salon.username}</a>
+                <a href="tel:${salon.phone}" class="contact-phone">📞 ${salon.phone || 'Sin Teléfono'}</a>
+            </div>
+            
+            <div class="admin-salon-prices-section">
+                <span class="pricing-lbl">${isSeller ? 'Permisos del Perfil' : 'Tarifas del Gremio'}</span>
+                ${pricesSectionHTML}
             </div>
             
             <div class="admin-salon-actions-section">
@@ -1192,21 +1248,27 @@ function renderAdminPanel() {
         
         if (!salon.authorized) {
             item.querySelector(".btn-approve-salon-action").addEventListener("click", async () => {
-                if (confirm(`¿Autorizar al salón "${salon.name}" para acceder a la red del gremio?`)) {
+                const targetName = isSeller ? salon.owner : salon.name;
+                if (confirm(`¿Autorizar al usuario "${targetName}" para acceder a la red del gremio?`)) {
                     await appDb.authorizeSalon(salon.id, salon.username);
                 }
             });
             item.querySelector(".btn-reject-salon-action").addEventListener("click", async () => {
-                if (confirm(`¿Rechazar y eliminar la solicitud del salón "${salon.name}"?`)) {
+                const targetName = isSeller ? salon.owner : salon.name;
+                if (confirm(`¿Rechazar y eliminar la solicitud de "${targetName}"?`)) {
                     await appDb.deleteSalon(salon.id, salon.username);
                 }
             });
         } else {
-            item.querySelector(".btn-icon-action.edit").addEventListener("click", () => {
-                openAdminEditModal(salon.id);
-            });
+            const editBtn = item.querySelector(".btn-icon-action.edit");
+            if (editBtn) {
+                editBtn.addEventListener("click", () => {
+                    openAdminEditModal(salon.id);
+                });
+            }
             item.querySelector(".btn-icon-action.delete").addEventListener("click", async () => {
-                if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el salón "${salon.name}" del gremio?`)) {
+                const targetName = isSeller ? salon.owner : salon.name;
+                if (confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${targetName}" del gremio?`)) {
                     await appDb.deleteSalon(salon.id, salon.username);
                 }
             });
@@ -1549,6 +1611,31 @@ function setupAuthListeners() {
         await appAuth.logout();
     });
 
+    // Toggle registration fields based on selected role
+    const accountTypeSelect = document.getElementById("reg-account-type");
+    const salonSpecificFields = document.getElementById("salon-specific-fields");
+    if (accountTypeSelect && salonSpecificFields) {
+        accountTypeSelect.addEventListener("change", (e) => {
+            const role = e.target.value;
+            const requiredFields = salonSpecificFields.querySelectorAll("[required]");
+            
+            if (role === "seller") {
+                salonSpecificFields.style.display = "none";
+                requiredFields.forEach(field => {
+                    field.setAttribute("data-was-required", "true");
+                    field.removeAttribute("required");
+                });
+            } else {
+                salonSpecificFields.style.display = "block";
+                requiredFields.forEach(field => {
+                    if (field.getAttribute("data-was-required") === "true") {
+                        field.setAttribute("required", "");
+                    }
+                });
+            }
+        });
+    }
+
     document.getElementById("login-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const email = document.getElementById("login-email").value.trim();
@@ -1579,21 +1666,45 @@ function setupAuthListeners() {
             return;
         }
         
+        const role = document.getElementById("reg-account-type").value;
         const salonData = {
-            name: document.getElementById("reg-salon-name").value.trim(),
+            role: role,
             owner: document.getElementById("reg-owner-name").value.trim(),
-            phone: document.getElementById("reg-salon-phone").value.trim(),
-            capacity: Number(document.getElementById("reg-capacity").value),
-            address: document.getElementById("reg-address").value.trim(),
-            priceFriday: Number(document.getElementById("reg-price-friday").value),
-            priceSaturday: Number(document.getElementById("reg-price-saturday").value),
-            priceSunday: Number(document.getElementById("reg-price-sunday").value),
-            priceWeekday: Number(document.getElementById("reg-price-weekday").value)
+            phone: document.getElementById("reg-salon-phone").value.trim()
         };
+        
+        if (role === "owner") {
+            salonData.name = document.getElementById("reg-salon-name").value.trim();
+            salonData.capacity = Number(document.getElementById("reg-capacity").value);
+            salonData.address = document.getElementById("reg-address").value.trim();
+            salonData.priceFriday = Number(document.getElementById("reg-price-friday").value);
+            salonData.priceSaturday = Number(document.getElementById("reg-price-saturday").value);
+            salonData.priceSunday = Number(document.getElementById("reg-price-sunday").value);
+            salonData.priceWeekday = Number(document.getElementById("reg-price-weekday").value);
+        } else {
+            // For seller, default fields
+            salonData.name = document.getElementById("reg-owner-name").value.trim();
+            salonData.capacity = 0;
+            salonData.address = "Vendedor Gremial";
+            salonData.priceFriday = 0;
+            salonData.priceSaturday = 0;
+            salonData.priceSunday = 0;
+            salonData.priceWeekday = 0;
+        }
         
         const res = await appAuth.register(email, pass, salonData);
         if (res.success) {
             document.getElementById("register-form").reset();
+            // Reset fields visibility and requirements just in case
+            if (accountTypeSelect) accountTypeSelect.value = "owner";
+            if (salonSpecificFields) {
+                salonSpecificFields.style.display = "block";
+                const requiredFields = salonSpecificFields.querySelectorAll("[data-was-required]");
+                requiredFields.forEach(field => {
+                    field.setAttribute("required", "");
+                    field.removeAttribute("data-was-required");
+                });
+            }
             registerBox.classList.add("hidden");
             loginBox.classList.remove("hidden");
             alert("¡Registro enviado con éxito! Tu cuenta está en cola de aprobación.");

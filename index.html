@@ -542,16 +542,19 @@
                         <input type="password" id="reg-confirm-password" required placeholder="••••••••">
                     </div>
                 </div>
-
-                <h4 class="auth-sub-title mt-2">2. Información del Salón</h4>
-                <div class="form-group">
-                    <label for="reg-salon-name">Nombre del Salón</label>
-                    <input type="text" id="reg-salon-name" required placeholder="Ej. Salón Versalles">
-                </div>
                 
+                <div class="form-group">
+                    <label for="reg-account-type">Tipo de Cuenta</label>
+                    <select id="reg-account-type" style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.75rem 1rem; border-radius: 10px; font-family: var(--font-body); width: 100%; outline: none; margin-bottom: 0.5rem;">
+                        <option value="owner">Propietario de Salón (Banquetero)</option>
+                        <option value="seller">Vendedor del Gremio (Solo Lectura)</option>
+                    </select>
+                </div>
+
+                <h4 class="auth-sub-title mt-2">2. Datos del Contacto</h4>
                 <div class="form-row flex-row-layout">
                     <div class="form-group col-6" style="width: 50%;">
-                        <label for="reg-owner-name">Propietario / Contacto</label>
+                        <label for="reg-owner-name" id="lbl-owner-name">Nombre Completo</label>
                         <input type="text" id="reg-owner-name" required placeholder="Ej. Antonio Rojas">
                     </div>
                     <div class="form-group col-6" style="width: 50%;">
@@ -559,37 +562,47 @@
                         <input type="tel" id="reg-salon-phone" required placeholder="Ej. 320 444 8888">
                     </div>
                 </div>
-                
-                <div class="form-row flex-row-layout">
-                    <div class="form-group col-6" style="width: 50%;">
-                        <label for="reg-capacity">Capacidad (Personas)</label>
-                        <input type="number" id="reg-capacity" required placeholder="Ej. 250">
-                    </div>
-                    <div class="form-group col-6" style="width: 50%;">
-                        <label for="reg-address">Ubicación / Dirección</label>
-                        <input type="text" id="reg-address" required placeholder="Ej. Calle 10 #45-12">
-                    </div>
-                </div>
 
-                <h4 class="auth-sub-title mt-2">3. Tarifas Base para el Gremio ($)</h4>
-                <div class="form-row pricing-grid">
-                    <div class="form-group pricing-box">
-                        <label for="reg-price-friday">Viernes ($)</label>
-                        <input type="number" id="reg-price-friday" required value="1000000">
+                <!-- Campos específicos de Salón (Ocultos para Vendedores) -->
+                <div id="salon-specific-fields">
+                    <h4 class="auth-sub-title mt-2">3. Información del Salón</h4>
+                    <div class="form-group">
+                        <label for="reg-salon-name">Nombre del Salón</label>
+                        <input type="text" id="reg-salon-name" required placeholder="Ej. Salón Versalles">
                     </div>
-                    <div class="form-group pricing-box">
-                        <label for="reg-price-saturday">Sábados ($)</label>
-                        <input type="number" id="reg-price-saturday" required value="1200000">
+                    
+                    <div class="form-row flex-row-layout">
+                        <div class="form-group col-6" style="width: 50%;">
+                            <label for="reg-capacity">Capacidad (Personas)</label>
+                            <input type="number" id="reg-capacity" required placeholder="Ej. 250">
+                        </div>
+                        <div class="form-group col-6" style="width: 50%;">
+                            <label for="reg-address">Ubicación / Dirección</label>
+                            <input type="text" id="reg-address" required placeholder="Ej. Calle 10 #45-12">
+                        </div>
                     </div>
-                    <div class="form-group pricing-box">
-                        <label for="reg-price-sunday">Domingos ($)</label>
-                        <input type="number" id="reg-price-sunday" required value="900000">
-                    </div>
-                    <div class="form-group pricing-box">
-                        <label for="reg-price-weekday">Semana ($)</label>
-                        <input type="number" id="reg-price-weekday" required value="600000">
+
+                    <h4 class="auth-sub-title mt-2">4. Tarifas Base para el Gremio ($)</h4>
+                    <div class="form-row pricing-grid">
+                        <div class="form-group pricing-box">
+                            <label for="reg-price-friday">Viernes ($)</label>
+                            <input type="number" id="reg-price-friday" required value="1000000">
+                        </div>
+                        <div class="form-group pricing-box">
+                            <label for="reg-price-saturday">Sábados ($)</label>
+                            <input type="number" id="reg-price-saturday" required value="1200000">
+                        </div>
+                        <div class="form-group pricing-box">
+                            <label for="reg-price-sunday">Domingos ($)</label>
+                            <input type="number" id="reg-price-sunday" required value="900000">
+                        </div>
+                        <div class="form-group pricing-box">
+                            <label for="reg-price-weekday">Semana ($)</label>
+                            <input type="number" id="reg-price-weekday" required value="600000">
+                        </div>
                     </div>
                 </div>
+                
                 <button type="submit" class="btn btn-primary btn-auth mt-2">Enviar Solicitud de Registro</button>
                 <div class="auth-error-msg" id="register-error-msg"></div>
             </form>
